@@ -309,7 +309,7 @@ class MyMainWindow(QMainWindow):
         if returncode == 0:
             image = QImage(self.tempfilename)
             self.graphicsView.setImage(image)
-            self.resize(min(image.width() + 64, 1400), min(image.height(), 800))
+            self.resize(min(image.width() + 64, 1400), min(image.height() + 64, 800))
             self.statusBarWidget.setText("Drag or zoom with middle button and select area of interest. "
                                          "Afterwards confirm area in menu.")
 
