@@ -139,7 +139,7 @@ class MagicWizard(QWizard):
                                            "(similar to a browser).\n"
                                            "Lastly, xvfb is needed so that no complete X11 display server needs to "
                                            "be installed. \n\n"
-                                           "On Ubuntu or Debian systems, this "
+                                           "On Ubuntu or Debian systems, these "
                                            "applications can be installed with the following command:",
 
                                            "$ sudo apt install urlwatch wkhtmltopdf xvfb"
