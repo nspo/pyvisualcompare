@@ -163,7 +163,7 @@ class MagicWizard(QWizard):
                                            "file permissions for urlwatch:",
 
                                            "$ chmod 700 -R ~/.config/urlwatch/"))
-        with open(PATH_MD5_SCRIPT, "r") as f:
+        with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), PATH_MD5_SCRIPT), "r") as f:
             script_content = f.read()
 
         self.addPage(LabelAndTextfieldPage(self,
