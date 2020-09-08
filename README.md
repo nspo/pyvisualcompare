@@ -19,14 +19,40 @@ It uses an [```urlwatch```](https://github.com/thp/urlwatch) shell command in th
 notification options offered by ```urlwatch``` can be used. Some other tools are needed on the computer that is used to select
 the area of interest (frontend PC) as well as on the server that is supposed to periodically check for changes (backend server).
 
+### Frontend (GUI) on Linux
+
+Clone the repository (or download the code as a `zip` file):
+
+```bash
+git clone https://github.com/nspo/pyvisualcompare.git
+cd pyvisualcompare/
+```
+
 On the frontend, the following packages must be installed (example for Ubuntu/Debian systems):
 
 ```sudo apt install python3-pyqt5 wkhtmltopdf xvfb```
 
-The setup wizard will help to install the needed packages on the backend server.
-
 When all necessary packages are installed on the frontend, pyvisualcompare can be started with ```python3 main.py```
 and the URL of interest can be entered. All other steps are (hopefully) explained in the interface.
+
+### Frontend (GUI) with Docker
+
+The following Docker command should make it possible to use the frontend on systems which have a running X11 server (most Linux distributions):
+
+`docker run -it -v /tmp/.X11-unix:/tmp/.X11-unix -e DISPLAY=$DISPLAY -u qtuser nspohrer/pyvisualcompare python3 /app/main.py`
+
+If you are running MacOS, you will probably have to install XQuartz and adapt the parameters a bit - see [this guide](https://gist.github.com/cschiewek/246a244ba23da8b9f0e7b11a68bf3285).
+
+### Backend on Linux
+The setup wizard will help to install the needed packages on the backend server.
+
+### Backend with Docker
+
+The following code snippet shows an example how you can run the main part of the `pyvisualcompare` backend with Docker (e.g. on MacOS or if you do not want to install system packages):
+
+`docker run -it -u qtuser nspohrer/pyvisualcompare /app/pyvisualcompare-md5.sh --crop-x 8 --crop-y 5 --crop-w 232 --crop-h 58 heise.de`
+
+You will need to adapt the call to `pyvisualcompare-md5.sh` with the parameters you get from the frontend.
 
 ## How exactly does it work?
 
