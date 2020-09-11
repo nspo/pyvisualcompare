@@ -54,6 +54,24 @@ The following code snippet shows an example how you can run the main part of the
 
 You will need to adapt the call to `pyvisualcompare-md5.sh` with the parameters you get from the frontend.
 
+### Backend custom parameters
+
+The backend uses `wkhtmltoimage` for rendering web pages into images.
+In some use cases, you may want to slightly modify the command the `pyvisualcompare` frontend generates for you.
+The following parameters can be added in the call to `pyvisualcompare-md5.sh` to change the default behavior:
+
+#### Delay
+
+If the web page is not yet fully loaded when the virtual screenshot is taken (e.g. due to Javascript), you may want to increase the default delay of 200 ms to a higher value by appending e.g. `--javascript-delay 1000` for a 1000 ms delay.
+
+Full example:
+
+```pyvisualcompare-md5.sh --crop-x 8 --crop-y 5 --crop-w 232 --crop-h 58 --javascript-delay 1000 heise.de```
+
+#### Other
+
+The full list of possible `wkhtmltoimage` parameters can be found [here](https://wkhtmltopdf.org/usage/wkhtmltopdf.txt).
+
 ## How exactly does it work?
 
 * A screenshot of the web page is rendered using [```wkhtmltoimage```](https://wkhtmltopdf.org/) 
