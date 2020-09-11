@@ -254,7 +254,7 @@ class MyMainWindow(QMainWindow):
             "kind: shell\n" \
             "command: pyvisualcompare-md5.sh"
 
-        s += "--crop-x {} --crop-y {} --crop-w {} --crop-h {} ".format(
+        s += " --crop-x {} --crop-y {} --crop-w {} --crop-h {} ".format(
             self.selected_rectangle.topLeft().x(),
             self.selected_rectangle.topLeft().y(),
             self.selected_rectangle.width(),
