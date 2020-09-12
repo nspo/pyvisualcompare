@@ -2,16 +2,15 @@ import sys
 import tempfile
 import subprocess
 import os
-import threading
 
 try:
     from PyQt5.QtCore import Qt, QT_VERSION_STR, QDateTime, QCoreApplication, QRect, QThread, pyqtSignal, QProcess
-    from PyQt5.QtGui import QImage, QIntValidator
+    from PyQt5.QtGui import QImage, QIntValidator, QValidator
     from PyQt5.QtWidgets import QApplication, QFileDialog, QMainWindow, QDialog, QVBoxLayout, QDialogButtonBox, \
         QDateTimeEdit, QTextEdit, QPlainTextEdit, QLineEdit, QLabel, QStyle, QCheckBox, QHBoxLayout, QGridLayout, \
         QMessageBox, QAbstractButton, QWizard, QWizardPage, QComboBox
 except ImportError:
-    raise ImportError("Requires PyQt5 or PyQt4.")
+    raise ImportError("Requires PyQt5.")
 from QtImagePartSelector import QtImagePartSelector
 
 WKHTMLTOIMAGE = "wkhtmltoimage"
@@ -28,10 +27,16 @@ try:
 except FileNotFoundError:
     raise FileNotFoundError("xvfb must be installed on system")
 
-
-from urllib.parse import urlparse
-
 PATH_MD5_SCRIPT = "pyvisualcompare-md5.sh"
+
+
+class NotEmptyValidator(QValidator):
+    def validate(self, text: str, pos):
+        if bool(text.strip()):
+            state = QValidator.Acceptable
+        else:
+            state = QValidator.Intermediate  # so that field can be made empty temporarily
+        return state, text, pos
 
 
 class UrlDialog(QDialog):
@@ -48,38 +53,87 @@ class UrlDialog(QDialog):
 
         self.url_edit = QLineEdit(self)
         self.url_edit.setPlaceholderText("https://duckduckgo.com")
+        self.url_edit.textChanged.connect(self.lineEditTextChanged)
+        self.url_edit.setValidator(NotEmptyValidator())
+        self.url_edit.setToolTip("Must not be empty")
         grid.addWidget(self.url_edit, 0, 1)
 
         grid.addWidget(QLabel("Static size"), 1, 0)
         self.static_size_edit = QCheckBox()
-        self.static_size_edit.stateChanged.connect(self.setSizeFieldsEnabled)
+        self.static_size_edit.stateChanged.connect(self.staticSizeChanged)
         grid.addWidget(self.static_size_edit, 1, 1)
 
         grid.addWidget(QLabel("Width of page"), 2, 0)
         self.width_edit = QLineEdit()
         self.width_edit.setText("1280")
-        self.width_edit.setValidator(QIntValidator(0, 99999))
+        self.width_edit.setValidator(QIntValidator(640, 20000))
+        self.width_edit.setToolTip("Must be between 640 and 20000")
+        self.width_edit.textChanged.connect(self.lineEditTextChanged)
         self.width_edit.setDisabled(True)
         grid.addWidget(self.width_edit, 2, 1)
 
         grid.addWidget(QLabel("Height of page"), 3, 0)
         self.height_edit = QLineEdit()
         self.height_edit.setText("1024")
-        self.height_edit.setValidator(QIntValidator(0, 99999))
+        self.height_edit.setValidator(QIntValidator(480, 20000))
+        self.height_edit.setToolTip("Must be between 480 and 20000")
+        self.height_edit.textChanged.connect(self.lineEditTextChanged)
         self.height_edit.setDisabled(True)
         grid.addWidget(self.height_edit, 3, 1)
 
+        grid.addWidget(QLabel("Delay before screenshot [ms]"), 4, 0)
+        self.delay_edit = QLineEdit()
+        self.delay_edit.setText("350")
+        self.delay_edit.setValidator(QIntValidator(200, 20000))
+        self.delay_edit.setToolTip("Must be between 200 and 20000")
+        self.delay_edit.textChanged.connect(self.lineEditTextChanged)
+        grid.addWidget(self.delay_edit, 4, 1)
+
         # OK and Cancel buttons
-        buttons = QDialogButtonBox(
+        self.buttons = QDialogButtonBox(
             QDialogButtonBox.Ok | QDialogButtonBox.Cancel,
             Qt.Horizontal, self)
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-        vbox.addWidget(buttons)
+        self.buttons.accepted.connect(self.accept)
+        self.buttons.rejected.connect(self.reject)
+        vbox.addWidget(self.buttons)
 
-    def setSizeFieldsEnabled(self, enable):
+        # initially disable OK button b/c no URL has been entered yet
+        self.buttons.buttons()[0].setDisabled(True)
+
+    def staticSizeChanged(self, enable):
         self.width_edit.setDisabled(not enable)
         self.height_edit.setDisabled(not enable)
+
+        if not enable:
+            # reset default values of fields below so that invalid values do not keep the user from proceeding
+            self.width_edit.setText("1280")
+            self.height_edit.setText("1024")
+
+    def lineEditTextChanged(self, *args, **kwargs):
+        """ After user edits a QLineEdit, set a color according to the field's current validity """
+        sender = self.sender()
+        state = self.getLineEditValidity(sender)
+        if state == QValidator.Acceptable:
+            sender.setStyleSheet("")  # reset background to default
+        else:
+            color = '#f6989d'  # red
+            sender.setStyleSheet("QLineEdit {{ background-color: {} }}".format(color))
+
+        # check whether all fields are acceptable
+        all_fields_valid = True
+        for line_edit in [self.url_edit, self.width_edit, self.height_edit, self.delay_edit]:
+            if not self.getLineEditValidity(line_edit) == QValidator.Acceptable:
+                all_fields_valid = False
+                break
+
+        # disable OK button if not all fields are valid
+        self.buttons.buttons()[0].setDisabled(not all_fields_valid)
+
+    @staticmethod
+    def getLineEditValidity(line_edit: QLineEdit) -> QValidator.State:
+        validator = line_edit.validator()
+        state = validator.validate(line_edit.text(), 0)[0]
+        return state
 
     @staticmethod
     def getUrl(parent=None):
@@ -91,11 +145,11 @@ class UrlDialog(QDialog):
             "url": dialog.url_edit.text(),
             "static_size": dialog.static_size_edit.isChecked(),
             "height": dialog.height_edit.text(),
-            "width": dialog.width_edit.text()
+            "width": dialog.width_edit.text(),
+            "delay": dialog.delay_edit.text()
         }
 
         return resultdict
-
 
 class LabelAndTextfieldPage(QWizardPage):
     def __init__(self, parent, labelstr, textfieldstr):
@@ -269,11 +323,16 @@ class MyMainWindow(QMainWindow):
     def getWkhtmlParameters(self):
         # generate only parameters passed to wkhtmltoimage (except destination filename) to get full screenshot
         parameters = []
+
         if self.url_dict["static_size"]:
             parameters.append("--height")
             parameters.append(self.url_dict["height"])
             parameters.append("--width")
             parameters.append(self.url_dict["width"])
+
+        # add delay
+        parameters.append("--javascript-delay")
+        parameters.append(self.url_dict["delay"])
 
         parameters.append(self.url_dict["url"])
 

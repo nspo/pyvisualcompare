@@ -43,6 +43,15 @@ The following Docker command should make it possible to use the frontend on syst
 
 If you are running MacOS, you will probably have to install XQuartz and adapt the parameters a bit - see [this guide](https://gist.github.com/cschiewek/246a244ba23da8b9f0e7b11a68bf3285).
 
+### Frontend options
+
+#### Static size
+You can choose to take a screenshot of the target web page with a static size.
+This seems to be necessary for some web pages to work correctly.
+
+#### Delay
+If the web page is not yet fully loaded when the virtual screenshot is taken (e.g. due to Javascript), you may want to increase the default delay of 350 ms to a higher value.
+
 ### Backend on Linux
 The setup wizard will help to install the needed packages on the backend server.
 
@@ -57,19 +66,8 @@ You will need to adapt the call to `pyvisualcompare-md5.sh` with the parameters 
 ### Backend custom parameters
 
 The backend uses `wkhtmltoimage` for rendering web pages into images.
-In some use cases, you may want to slightly modify the command the `pyvisualcompare` frontend generates for you.
-The following parameters can be added in the call to `pyvisualcompare-md5.sh` to change the default behavior:
-
-#### Delay
-
-If the web page is not yet fully loaded when the virtual screenshot is taken (e.g. due to Javascript), you may want to increase the default delay of 200 ms to a higher value by appending e.g. `--javascript-delay 1000` for a 1000 ms delay.
-
-Full example:
-
-```pyvisualcompare-md5.sh --crop-x 8 --crop-y 5 --crop-w 232 --crop-h 58 --javascript-delay 1000 heise.de```
-
-#### Other
-
+In some use cases, you might want to slightly modify the command the `pyvisualcompare` frontend generates for you.
+Parameters for `wkhtmltoimage` can be added in the call to `pyvisualcompare-md5.sh` to change the default behavior.
 The full list of possible `wkhtmltoimage` parameters can be found [here](https://wkhtmltopdf.org/usage/wkhtmltopdf.txt).
 
 ## How exactly does it work?
